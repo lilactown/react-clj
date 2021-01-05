@@ -42,7 +42,9 @@ use cases.
 The design of this library is meant to be much smaller and more general. Just
 like in JS how you can have multiple "reconcilers" which take ReactJS components
 and render them on whatever platform you want to target, the goal of this
-library is to be just as flexible.
+library is to be just as flexible while maintaining compatibility with React,
+allowing us to use the battle-tested library in environments where we can and
+using `react-clj` where we can't.
 
 ## Non-goals
 
