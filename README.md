@@ -106,8 +106,8 @@ Links:
 
 We will probably want to create a runtime similar to React Fiber which consumers
 can then build custom reconcilers on top of. This probably(?) isn't necessary
-for SSG or server components, but may(?) be desirable for things like rendering
-a dynamic UI. Who knows?
+for SSG, but may(?) be necessary for server components, and probably(?)
+desirable for rendering a dynamic UI in Skia, Swing or JavaFX. Who knows?
 
 Good news: we already have rich tools for doing immutable updates and
 concurrency-safe containers.
