@@ -8,8 +8,8 @@ Clojure.
 
 ReactJS is primarily used as a client-side framework for building rich user
 interfaces on the web. Other use cases include building UIs on mobile, desktop,
-as well as statically generating HTML on the server. Typically these other use
-cases presuppose you are running including a JS environment in order to use the
+and statically generating HTML on the server. Typically these other use cases
+presuppose you are running including a JS environment in order to use the
 ReactJS' runtime and code written for it.
 
 This library is targeted at those other use cases by building a runtime that
