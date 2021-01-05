@@ -118,8 +118,8 @@ Bad news: we live in a multithreaded world on the JVM, which requires additional
 thought to see if ReactJS' model works well outside of a single threaded
 context.
 
-TODO: Look at projects like [revery](https://github.com/revery-ui/revery) which
-implement reconciliation algos in other runtimes (OCaml).
+TODO: Look at projects like [brisk-reconciler](https://github.com/briskml/brisk-reconciler)
+which implement reconciliation algos in other runtimes (OCaml).
 
 ### Hooks
 
