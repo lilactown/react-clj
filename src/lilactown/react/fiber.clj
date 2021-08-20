@@ -138,18 +138,15 @@
 
 
 (defn reconcile-node
-  [loc]
-  (let [node (zip/node loc)
-        hooks-context (hooks-context (-> node :previous :state))
+  [node]
+  (let [hooks-context (hooks-context (-> node :previous :state))
         results (binding [*hooks-context* hooks-context]
-                  (perform-work node))
-        node' (zip/make-node
-               loc
-               (if (map? node)
-                 (assoc node :state (-> hooks-context :state deref :current))
-                 node)
-               results)]
-    (zip/replace loc node')))
+                  (perform-work node))]
+    (make-fiber
+     (if (map? node)
+       (assoc node :state (-> hooks-context :state deref :current))
+       node)
+     results)))
 
 
 (defn reconcile
@@ -157,7 +154,7 @@
   (loop [loc (fiber-zipper fiber)]
     (if (zip/end? loc)
       (zip/root loc)
-      (recur (zip/next (reconcile-node loc))))))
+      (recur (zip/next (zip/edit loc reconcile-node))))))
 
 
 ;;
