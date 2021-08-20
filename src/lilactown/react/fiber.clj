@@ -80,6 +80,15 @@
                  :current []}) })
 
 
+(defn set-current-hook-state!
+  [ctx state]
+  (swap! (:state ctx)
+         (fn [hooks-state]
+           (-> hooks-state
+               (update :current conj state)
+               (update :index inc)))))
+
+
 (defn use-state
   [init]
   (let [context *hooks-context*
@@ -87,11 +96,7 @@
         ;; TODO allow implementation to be swapped in here
         state (or (nth previous index)
                   [init (fn [& _])])]
-    (swap! (:state context)
-           (fn [state*]
-             (-> state*
-                 (update :current conj state)
-                 (update :index inc))))
+    (set-current-hook-state! context state)
     state))
 
 
@@ -105,11 +110,7 @@
     (when (not= (second prev-state) deps)
       ;; TODO schedule effect using impl TBD
       nil)
-    (swap! (:state context)
-           (fn [state*]
-             (-> state*
-                 (update :current conj state)
-                 (update :index inc))))
+    (set-current-hook-state! context state)
     nil))
 
 
