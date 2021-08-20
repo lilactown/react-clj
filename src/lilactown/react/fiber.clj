@@ -138,10 +138,14 @@
 (defn reconcile-node
   [loc]
   (let [node (zip/node loc)
-        results (perform-work node)
+        hooks-context (hooks-context (-> node :previous :state))
+        results (binding [*hooks-context* hooks-context]
+                  (perform-work node))
         node' (zip/make-node
                loc
-               node
+               (if (map? node)
+                 (assoc node :state (-> hooks-context :state deref :current))
+                 node)
                results)]
     (zip/replace loc node')))
 
@@ -191,15 +195,16 @@
        ($ "div" {:key n} n))))
 
 
-(defn root
+(defn app
   [_]
-  ($ "div"
-     {:class "app container"}
-     ($ "h1" "App title")
-     #_"foo"
-     ($ greeting {:user-name "Will"})
-     ($ "input" {:value "Will"})
-     ($ counter)))
+  (let [[user-name set-user-name] (use-state "Will")]
+    ($ "div"
+       {:class "app container"}
+       ($ "h1" "App title")
+       "foo"
+       ($ greeting {:user-name user-name})
+       ($ "input" {:value user-name :on-change #(set-user-name)})
+       ($ counter))))
 
 
-#_(reconcile (root-fiber ($ root)))
+(reconcile (root-fiber ($ app)))
