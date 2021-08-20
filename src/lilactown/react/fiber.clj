@@ -14,7 +14,7 @@
 (defrecord Element [type props key])
 
 
-(defrecord FiberNode [type props state children])
+(defrecord FiberNode [alternate type props state children])
 
 
 (defn element?
@@ -44,6 +44,7 @@
   (if (or (fiber? fiber)
           (element? fiber))
     (->FiberNode
+     (:alternate fiber)
      (:type fiber)
      (:props fiber)
      (:state fiber)
@@ -52,8 +53,8 @@
 
 
 (defn root-fiber
-  [el]
-  (->FiberNode :root {:children [el]} nil nil))
+  [alternate el]
+  (->FiberNode alternate :root {:children [el]} nil nil))
 
 
 (defn fiber-zipper
@@ -74,9 +75,9 @@
 
 
 (defn hooks-context
-  [previous-state]
+  [alternate-state]
   {:state (atom {:index 0
-                 :previous previous-state
+                 :alternate alternate-state
                  :current []}) })
 
 
@@ -92,9 +93,9 @@
 (defn use-state
   [init]
   (let [context *hooks-context*
-        {:keys [index previous]} @(:state context)
+        {:keys [index alternate]} @(:state context)
         ;; TODO allow implementation to be swapped in here
-        state (or (nth previous index)
+        state (or (nth alternate index)
                   [init (fn [& _])])]
     (set-current-hook-state! context state)
     state))
@@ -190,22 +191,24 @@
 
 (defn counter
   [_]
-  ($ "div"
-     ($ "button" "+")
-     (for [n (range 4)]
-       ($ "div" {:key n} n))))
+  (let [[count set-count] (use-state 4)]
+    ($ "div"
+      ($ "button" {:on-click #(set-count inc)} "+")
+      (for [n (range count)]
+        ($ "div" {:key n} n)))))
 
 
 (defn app
-  [_]
-  (let [[user-name set-user-name] (use-state "Will")]
-    ($ "div"
-       {:class "app container"}
-       ($ "h1" "App title")
-       "foo"
-       ($ greeting {:user-name user-name})
-       ($ "input" {:value user-name :on-change #(set-user-name)})
-       ($ counter))))
+  [{:keys [user-name]}]
+  ($ "div"
+     {:class "app container"}
+     ($ "h1" "App title")
+     "foo"
+     ($ greeting {:user-name user-name})
+     ($ counter)))
 
 
-(reconcile (root-fiber ($ app)))
+(def fiber0 (reconcile (root-fiber nil ($ app {:user-name "Will"}))))
+
+
+(reconcile (root-fiber fiber0 ($ app {:user-name "Alan"})))
