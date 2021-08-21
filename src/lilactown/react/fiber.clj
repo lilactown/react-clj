@@ -77,8 +77,14 @@
 (defn hooks-context
   [alternate-state]
   {:state (atom {:index 0
-                 :alternate alternate-state
-                 :current []}) })
+                 :previous alternate-state
+                 :current []})})
+
+
+(defn get-previous-hook-state!
+  [ctx]
+  (let [{:keys [index previous]} @(:state ctx)]
+    (nth previous index)))
 
 
 (defn set-current-hook-state!
@@ -90,18 +96,73 @@
                (update :index inc)))))
 
 
+(defn use-ref
+  [init]
+  (let [ctx *hooks-context*]
+    (or (get-previous-hook-state! ctx)
+        (doto (atom init)
+          (->> (set-current-hook-state! ctx))))))
+
+
+(defn use-memo
+  [f deps]
+  (let [ctx *hooks-context*
+        [_ prev-deps :as prev-state] (get-previous-hook-state! ctx)]
+    (if (not= prev-deps deps)
+      (let [v (f)
+            state [v deps]]
+        (set-current-hook-state! ctx state)
+        state)
+      prev-state)))
+
+
+(defn use-callback
+  [f deps]
+  (use-memo #(f) deps))
+
+
+(defn use-reducer
+  ([f initial]
+   (use-reducer f initial identity))
+  ([_f initial init-fn]
+   (let [ctx *hooks-context*
+         state (or (get-previous-hook-state! ctx)
+                   ;; TODO allow implementation to be swapped in here
+                   [(init-fn initial) (fn [& _])])]
+     (set-current-hook-state! ctx state)
+     state)))
+
+
 (defn use-state
   [init]
-  (let [context *hooks-context*
-        {:keys [index alternate]} @(:state context)
-        ;; TODO allow implementation to be swapped in here
-        state (or (nth alternate index)
-                  [init (fn [& _])])]
-    (set-current-hook-state! context state)
-    state))
+  (let [[state dispatch] (use-reducer
+                          (fn [state [arg & args]]
+                            (if (ifn? arg)
+                              (apply arg state args)
+                              arg))
+                          init)
+        set-state (use-callback
+                   (fn [& args]
+                     (dispatch args))
+                   [])]
+    [state set-state]))
 
 
 (defn use-effect
+  [f deps]
+  (let [context *hooks-context*
+        {:keys [index previous]} @(:state context)
+        prev-state (nth previous index)
+        state [f deps]]
+    ;; deps not=
+    (when (not= (second prev-state) deps)
+      ;; TODO schedule effect using impl TBD
+      nil)
+    (set-current-hook-state! context state)
+    nil))
+
+
+(defn use-layout-effect
   [f deps]
   (let [context *hooks-context*
         {:keys [index previous]} @(:state context)
@@ -138,7 +199,7 @@
 
 
 (defn reconcile-node
-  [node]
+  [node host-config]
   (let [hooks-context (hooks-context (-> node :previous :state))
         results (binding [*hooks-context* hooks-context]
                   (perform-work node))]
@@ -150,11 +211,11 @@
 
 
 (defn reconcile
-  [fiber]
+  [fiber host-config]
   (loop [loc (fiber-zipper fiber)]
     (if (zip/end? loc)
       (zip/root loc)
-      (recur (zip/next (zip/edit loc reconcile-node))))))
+      (recur (zip/next (zip/edit loc reconcile-node host-config))))))
 
 
 ;;
@@ -205,7 +266,12 @@
      ($ counter)))
 
 
-(def fiber0 (reconcile (root-fiber nil ($ app {:user-name "Will"}))))
+(def fiber0
+  (reconcile
+   (root-fiber nil ($ app {:user-name "Will"}))
+   {}))
 
 
-(reconcile (root-fiber fiber0 ($ app {:user-name "Alan"})))
+#_(reconcile
+ (root-fiber fiber0 ($ app {:user-name "Alan"}))
+ {})
